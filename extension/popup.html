@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GPT&amp;Grok Exporter Local</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <div>
+          <p class="eyebrow">LOCAL ONLY</p>
+          <h1>GPT&amp;Grok Exporter Local</h1>
+          <p class="subtitle">把 ChatGPT／Grok 對話存成普通 <code>.md</code></p>
+        </div>
+        <span class="status-pill" id="statusPill" data-state="idle">待擷取</span>
+      </header>
+
+      <section class="notice" aria-label="隱私提醒">
+        <strong>內容只在本機處理。</strong>
+        <span>不會上傳到伺服器；下載前仍請確認對話沒有密碼、API key、病人資料或其他敏感內容。</span>
+      </section>
+
+      <section class="actions">
+        <button class="primary" id="captureButton" type="button">擷取目前對話</button>
+        <button class="secondary" id="downloadButton" type="button" disabled>下載 .md</button>
+      </section>
+
+      <p class="message" id="message" role="status" aria-live="polite">請先開啟 ChatGPT 或 Grok 對話頁面。</p>
+
+      <form id="metadataForm" class="metadata" hidden>
+        <label>
+          標題
+          <input id="titleInput" name="title" maxlength="180" autocomplete="off">
+        </label>
+        <label>
+          語言
+          <input id="languageInput" name="language" maxlength="24" value="zh-TW" autocomplete="off">
+        </label>
+        <label>
+          標籤（以逗號分隔）
+          <input id="tagsInput" name="tags" maxlength="240" placeholder="chatgpt, research-notes" autocomplete="off">
+        </label>
+      </form>
+
+      <section id="qualityPanel" class="quality" hidden>
+        <div class="quality-heading">
+          <h2>擷取品質</h2>
+          <strong id="qualityVerdict">—</strong>
+        </div>
+        <dl class="stats">
+          <div><dt>總回合</dt><dd id="turnCount">0</dd></div>
+          <div><dt>Human</dt><dd id="humanCount">0</dd></div>
+          <div><dt>AI</dt><dd id="aiCount">0</dd></div>
+        </dl>
+        <ul id="warningList" class="warnings"></ul>
+      </section>
+
+      <details id="previewDetails" hidden>
+        <summary>預覽前 2,000 字</summary>
+        <pre id="preview"></pre>
+      </details>
+
+      <footer>只在你按下「擷取目前對話」後執行。</footer>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

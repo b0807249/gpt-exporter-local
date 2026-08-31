@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "GPT&Grok Exporter Local",
+  "short_name": "GPT&Grok",
+  "version": "1.2.0",
+  "description": "Export the active ChatGPT or Grok conversation to a local Markdown file. No server, analytics, or network requests.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_title": "GPT&Grok Exporter Local",
+    "default_popup": "popup.html"
+  }
+}

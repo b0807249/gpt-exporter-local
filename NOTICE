@@ -1,0 +1,14 @@
+GPT&Grok Exporter Local
+Copyright (c) 2026 gpt-exporter-local contributors
+
+This extension is independently implemented and bundles no third-party runtime
+code or dependencies. It is not affiliated with or endorsed by OpenAI,
+ChatGPT, xAI, or Grok.
+
+The early product scope and capture approach were informed by LocalThink Builder,
+an MIT-licensed project from localthink-org:
+https://github.com/localthink-org/localthink-builder
+
+No LocalThink Builder runtime code or dependency is bundled in this repository.
+LocalThink Builder remains copyright its respective contributors. This notice
+does not imply affiliation with or endorsement by LocalThink.
