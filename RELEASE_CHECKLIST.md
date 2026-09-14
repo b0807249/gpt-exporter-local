@@ -6,7 +6,7 @@
 - [ ] The Git history contains only GitHub noreply author metadata.
 - [ ] No `.env`, credentials, cookies, browser profiles, local databases, exports, archives, or real conversation fixtures are tracked.
 - [ ] No local absolute path, personal email, patient data, private project identifier, or private URL appears in code, docs, issues, screenshots, or examples.
-- [ ] A clean Chrome profile passes synthetic short, medium, and virtualized long-conversation tests on both supported platforms.
+- [ ] A clean Chrome profile passes synthetic short, medium, and virtualized long-conversation tests on each supported platform.
 - [ ] The downloaded Markdown is checked for role order, Unicode, lists, tables, links, code fences, and capture warnings.
 - [ ] Manifest permissions remain exactly `activeTab` and `scripting`; no host permission, background worker, analytics, remote code, or network request is added.
 - [ ] `NOTICE`, `LICENSE`, `SECURITY.md`, and `CHANGELOG.md` are included.

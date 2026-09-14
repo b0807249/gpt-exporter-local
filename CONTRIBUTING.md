@@ -14,4 +14,4 @@ npm run check
 npm run audit:public
 ```
 
-If an upstream ChatGPT or Grok DOM change is involved, describe the selector shape and expected role order without pasting private conversation content.
+If an upstream ChatGPT, Grok, Claude, or Gemini DOM change is involved, describe the selector shape and expected role order without pasting private conversation content.

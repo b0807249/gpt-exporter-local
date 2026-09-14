@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GPT&amp;Grok Exporter Local</title>
+    <title>LLM Exporter Local</title>
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
@@ -11,8 +11,8 @@
       <header class="header">
         <div>
           <p class="eyebrow">LOCAL ONLY</p>
-          <h1>GPT&amp;Grok Exporter Local</h1>
-          <p class="subtitle">把 ChatGPT／Grok 對話存成普通 <code>.md</code></p>
+          <h1>LLM Exporter Local</h1>
+          <p class="subtitle">把 ChatGPT／Grok／Claude／Gemini 對話存成普通 <code>.md</code></p>
         </div>
         <span class="status-pill" id="statusPill" data-state="idle">待擷取</span>
       </header>
@@ -27,7 +27,7 @@
         <button class="secondary" id="downloadButton" type="button" disabled>下載 .md</button>
       </section>
 
-      <p class="message" id="message" role="status" aria-live="polite">請先開啟 ChatGPT 或 Grok 對話頁面。</p>
+      <p class="message" id="message" role="status" aria-live="polite">請先開啟 ChatGPT、Grok、Claude 或 Gemini 對話頁面。</p>
 
       <form id="metadataForm" class="metadata" hidden>
         <label>
@@ -40,7 +40,7 @@
         </label>
         <label>
           標籤（以逗號分隔）
-          <input id="tagsInput" name="tags" maxlength="240" placeholder="chatgpt, research-notes" autocomplete="off">
+          <input id="tagsInput" name="tags" maxlength="240" placeholder="research-notes" autocomplete="off">
         </label>
       </form>
 
@@ -64,6 +64,7 @@
 
       <footer>只在你按下「擷取目前對話」後執行。</footer>
     </main>
+    <script src="src/platforms.js"></script>
     <script type="module" src="popup.js"></script>
   </body>
 </html>

@@ -1,13 +1,7 @@
-import { buildMarkdownDocument } from "./src/ltf.js";
+import { buildMarkdownDocument, sourceLabel as markdownSourceLabel } from "./src/ltf.js";
 
-const PLATFORM_BY_HOST = new Map([
-  ["chatgpt.com", "chatgpt"],
-  ["www.chatgpt.com", "chatgpt"],
-  ["chat.openai.com", "chatgpt"],
-  ["grok.com", "grok"],
-  ["www.grok.com", "grok"],
-]);
-const CAPTURE_MESSAGE = "GPT_EXPORTER_CAPTURE_V2";
+const PLATFORMS = globalThis.LlmExporterPlatforms;
+const CAPTURE_MESSAGE = "LLM_EXPORTER_CAPTURE_V1";
 
 const elements = {
   captureButton: document.querySelector("#captureButton"),
@@ -43,14 +37,18 @@ function setStatus(state, label, message, isError = false) {
   elements.message.classList.toggle("error", isError);
 }
 
+function sourceLabel(platform) {
+  return PLATFORMS?.sourceLabel(platform) || markdownSourceLabel(platform);
+}
+
 function renderCapture(capture) {
   latestCapture = capture;
   const quality = capture.quality;
   elements.metadataForm.hidden = false;
   elements.qualityPanel.hidden = false;
   elements.previewDetails.hidden = false;
-  const sourceLabel = capture.platform === "grok" ? "Grok" : "ChatGPT";
-  elements.titleInput.value = capture.title || `${sourceLabel} conversation`;
+  const label = sourceLabel(capture.platform);
+  elements.titleInput.value = capture.title || `${label} conversation`;
   elements.turnCount.textContent = String(quality.turnCount);
   elements.humanCount.textContent = String(quality.humanCount);
   elements.aiCount.textContent = String(quality.aiCount);
@@ -70,7 +68,7 @@ function renderCapture(capture) {
 
   if (quality.complete) {
     elements.qualityVerdict.textContent = "未偵測到警告";
-    setStatus("success", "已擷取", `已從 ${sourceLabel} 掃描頂端到底部並擷取 ${quality.turnCount} 個回合；下載前仍建議抽查原頁。`);
+    setStatus("success", "已擷取", `已從 ${label} 掃描頂端到底部並擷取 ${quality.turnCount} 個回合；下載前仍建議抽查原頁。`);
   } else {
     elements.qualityVerdict.textContent = "請檢查警告";
     setStatus("warning", "需檢查", `已擷取 ${quality.turnCount} 個回合，但偵測到可能不完整的情況。`);
@@ -78,11 +76,12 @@ function renderCapture(capture) {
 }
 
 async function getActiveTab() {
+  if (!PLATFORMS) throw new Error("平台設定尚未載入。");
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id || !tab.url) throw new Error("找不到目前分頁。");
   const url = new URL(tab.url);
-  if (!PLATFORM_BY_HOST.has(url.hostname)) {
-    throw new Error("目前分頁不是支援的對話頁面。請開啟 chatgpt.com 或 grok.com 的對話後再試一次。");
+  if (!PLATFORMS.detectPlatform(url.hostname)) {
+    throw new Error(`目前分頁不是支援的對話頁面。請開啟 ${PLATFORMS.supportedHostsMessage()} 的對話後再試一次。`);
   }
   return tab;
 }
@@ -90,7 +89,7 @@ async function getActiveTab() {
 async function sendCaptureRequest(tabId) {
   await chrome.scripting.executeScript({
     target: { tabId },
-    files: ["src/capture-core.js", "src/content.js"],
+    files: ["src/capture-core.js", "src/platforms.js", "src/content.js"],
   });
   return chrome.tabs.sendMessage(tabId, { type: CAPTURE_MESSAGE });
 }

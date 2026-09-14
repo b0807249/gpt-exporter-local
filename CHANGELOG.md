@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0 — 2026-09-15
+
+- Renamed the extension to LLM Exporter Local.
+- Added Claude and Gemini webpage capture at the same visible-turn Markdown scope as ChatGPT and Grok.
+- Fixed Claude adapter so a present `user-message` test id no longer hides `.font-claude-response` assistant turns.
+- Extracted a shared host/platform registry and open-shadow DOM walk for Gemini custom elements.
+- Did not add Artifact, Canvas, thinking panels, desktop apps, or vendor APIs.
+- Prefer Gemini `.query-text` over the wrapping bubble so the "You said" chrome is not exported; strip trailing `Google Gemini` from titles.
+- Strip Gemini headings that start with 「你說了」 and collapse the duplicated user question.
+
 ## 1.2.0 — 2026-09-01
 
 - Replaced the tail-node shortcut with a full top-to-bottom viewport sweep.

@@ -1,9 +1,9 @@
-GPT&Grok Exporter Local
+LLM Exporter Local
 Copyright (c) 2026 gpt-exporter-local contributors
 
 This extension is independently implemented and bundles no third-party runtime
 code or dependencies. It is not affiliated with or endorsed by OpenAI,
-ChatGPT, xAI, or Grok.
+ChatGPT, xAI, Grok, Anthropic, Claude, Google, or Gemini.
 
 The early product scope and capture approach were informed by LocalThink Builder,
 an MIT-licensed project from localthink-org:

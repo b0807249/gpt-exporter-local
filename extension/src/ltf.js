@@ -1,3 +1,10 @@
+const SOURCE_LABELS = {
+  chatgpt: "ChatGPT",
+  grok: "Grok",
+  claude: "Claude",
+  gemini: "Gemini",
+};
+
 export function normalizeTags(value) {
   const raw = Array.isArray(value) ? value : String(value ?? "").split(",");
   return [...new Set(raw.map((tag) => String(tag).trim()).filter(Boolean))].slice(0, 24);
@@ -11,7 +18,7 @@ export function safeFilename(value) {
     .replace(/[. ]+$/g, "")
     .trim()
     .slice(0, 120);
-  return normalized || "chatgpt-conversation";
+  return normalized || "conversation";
 }
 
 function isoDate(value) {
@@ -19,14 +26,17 @@ function isoDate(value) {
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
 }
 
+export function sourceLabel(platform) {
+  return SOURCE_LABELS[platform] || SOURCE_LABELS.chatgpt;
+}
+
 export function buildMarkdownDocument({ metadata, capture }) {
   if (!capture || !Array.isArray(capture.turns) || capture.turns.length === 0) {
     throw new Error("沒有可匯出的對話回合。");
   }
 
-  const platform = capture.platform === "grok" ? "grok" : "chatgpt";
-  const sourceLabel = platform === "grok" ? "Grok" : "ChatGPT";
-  const title = String(metadata?.title || capture.title || `${sourceLabel} conversation`).trim();
+  const label = sourceLabel(capture.platform);
+  const title = String(metadata?.title || capture.title || `${label} conversation`).trim();
   const created = isoDate(metadata?.created || capture.capturedAt);
   const quality = capture.quality || {};
   const normalized = {
@@ -48,7 +58,7 @@ export function buildMarkdownDocument({ metadata, capture }) {
   });
 
   const details = [
-    `> Source: ${sourceLabel} · Exported: ${normalized.created}`,
+    `> Source: ${label} · Exported: ${normalized.created}`,
     `> Language: ${normalized.language} · Turns: ${normalized.turnCount} (Human ${normalized.humanCount}, AI ${normalized.aiCount})`,
   ];
   if (normalized.tags.length > 0) details.push(`> Tags: ${normalized.tags.join(", ")}`);
@@ -57,7 +67,7 @@ export function buildMarkdownDocument({ metadata, capture }) {
     ? []
     : [
         "",
-        `> **Capture warning:** This conversation may be incomplete. Compare it with the original ${sourceLabel} page.`,
+        `> **Capture warning:** This conversation may be incomplete. Compare it with the original ${label} page.`,
         ...normalized.warnings.map((item) => `> - ${String(item).replace(/\s+/g, " ").trim()}`),
       ];
 

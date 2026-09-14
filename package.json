@@ -1,12 +1,12 @@
 {
-  "name": "gpt-exporter-local",
-  "version": "1.2.0",
+  "name": "llm-exporter",
+  "version": "1.3.0",
   "private": true,
   "type": "module",
-  "description": "Local-only Chrome extension for exporting ChatGPT and Grok conversations as plain Markdown.",
+  "description": "Local-only Chrome extension for exporting ChatGPT, Grok, Claude, and Gemini conversations as plain Markdown.",
   "scripts": {
     "test": "node --test",
-    "check": "node --check extension/popup.js && node --check extension/src/capture-core.js && node --check extension/src/content.js && node --check extension/src/ltf.js",
+    "check": "node --check extension/popup.js && node --check extension/src/capture-core.js && node --check extension/src/platforms.js && node --check extension/src/content.js && node --check extension/src/ltf.js",
     "audit:public": "node scripts/public-readiness.mjs"
   },
   "engines": {

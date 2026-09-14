@@ -18,8 +18,13 @@
     return { entries: new Map(), nextSequence: 0 };
   }
 
+  function platformKey(value) {
+    const platform = String(value || "").toLowerCase();
+    return /^(chatgpt|grok|claude|gemini)$/.test(platform) ? platform : "chatgpt";
+  }
+
   function turnKey(turn) {
-    const platform = turn.platform === "grok" ? "grok" : "chatgpt";
+    const platform = platformKey(turn.platform);
     const role = turn.role === "human" ? "human" : "ai";
     if (turn.messageId) return `${platform}:message:${turn.messageId}:${role}`;
     if (Number.isInteger(turn.turnNumber)) return `${platform}:turn:${turn.turnNumber}:${role}`;
@@ -89,7 +94,9 @@
     const sameRoleAdjacency = turns.slice(1).filter((turn, index) => turn.role === turns[index].role).length;
     if (sameRoleAdjacency > 0) warnings.push(`偵測到 ${sameRoleAdjacency} 組相鄰同角色回合，請核對是否有漏訊息。`);
     if (Math.abs(humanCount - aiCount) > 1) warnings.push("Human 與 AI 回合數差距超過 1，請核對原始對話。");
-    if (platform === "grok" && turns.length > 200) warnings.push("Grok 擷取回合數異常偏高，請確認沒有包含頁面導覽文字。");
+    if ((platform === "grok" || platform === "gemini") && turns.length > 200) {
+      warnings.push("擷取回合數異常偏高，請確認沒有包含頁面導覽文字。");
+    }
 
     return {
       complete: warnings.length === 0,
@@ -107,6 +114,7 @@
     createTurnAccumulator,
     mergeTurn,
     orderedTurns,
+    platformKey,
     textHash,
   });
 })();

@@ -81,6 +81,20 @@ test("reports success only after both traversal boundaries are proven", () => {
   assert.match(tailOnly.warnings.join("\n"), /頂端/);
 });
 
+test("keeps Claude and Gemini identities off the ChatGPT key namespace", () => {
+  const accumulator = core.createTurnAccumulator();
+  mergeSnapshot(accumulator, "claude", [
+    { role: "human", content: "same text", messageId: "m1" },
+  ]);
+  mergeSnapshot(accumulator, "gemini", [
+    { role: "human", content: "same text", messageId: "m1" },
+  ]);
+  mergeSnapshot(accumulator, "chatgpt", [
+    { role: "human", content: "same text", messageId: "m1" },
+  ]);
+  assert.equal(core.orderedTurns(accumulator).length, 3);
+});
+
 test("flags a gap in captured ChatGPT turn numbers", () => {
   const report = core.assessCaptureQuality([
     { role: "human", content: "question", turnNumber: 0 },

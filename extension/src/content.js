@@ -1,19 +1,14 @@
 (() => {
   "use strict";
 
-  const INSTALL_GUARD = "__gptExporterLocalInstalledV120";
-  const CAPTURE_MESSAGE = "GPT_EXPORTER_CAPTURE_V2";
+  const INSTALL_GUARD = "__llmExporterLocalInstalledV133";
+  const CAPTURE_MESSAGE = "LLM_EXPORTER_CAPTURE_V1";
   const CAPTURE_CORE = globalThis.GptExporterCaptureCore;
-  const PLATFORM_BY_HOST = new Map([
-    ["chatgpt.com", "chatgpt"],
-    ["www.chatgpt.com", "chatgpt"],
-    ["chat.openai.com", "chatgpt"],
-    ["grok.com", "grok"],
-    ["www.grok.com", "grok"],
-  ]);
+  const PLATFORMS = globalThis.LlmExporterPlatforms;
 
   if (globalThis[INSTALL_GUARD]) return;
-  if (!CAPTURE_CORE) throw new Error("GPT Exporter capture core was not loaded.");
+  if (!CAPTURE_CORE) throw new Error("LLM Exporter capture core was not loaded.");
+  if (!PLATFORMS) throw new Error("LLM Exporter platforms were not loaded.");
   globalThis[INSTALL_GUARD] = true;
 
   const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -33,17 +28,69 @@
   function normalizeRole(value) {
     const role = String(value || "").toLowerCase();
     if (role === "user" || role === "human") return "human";
-    if (role === "assistant" || role === "ai") return "ai";
+    if (role === "assistant" || role === "ai" || role === "model" || role === "bot") return "ai";
     return null;
   }
 
   function detectPlatform() {
-    return PLATFORM_BY_HOST.get(location.hostname) || null;
+    return PLATFORMS.detectPlatform(location.hostname);
+  }
+
+  function queryAllDeep(selector, root = document) {
+    const results = [];
+    const visit = (node) => {
+      if (!node?.querySelectorAll) return;
+      results.push(...node.querySelectorAll(selector));
+      for (const element of node.querySelectorAll("*")) {
+        if (element.shadowRoot) visit(element.shadowRoot);
+      }
+    };
+    visit(root);
+    return results;
+  }
+
+  function uniqueDocuments(nodes) {
+    return [...new Set(nodes)];
+  }
+
+  function outermostNodes(nodes) {
+    const unique = uniqueDocuments(nodes);
+    return unique.filter((node) => !unique.some((other) => other !== node && other.contains(node)));
+  }
+
+  function classNames(node) {
+    return String(node.getAttribute("class") || node.className || "").toLowerCase();
+  }
+
+  function composedParent(element) {
+    if (!element) return null;
+    if (element.parentElement) return element.parentElement;
+    const root = element.getRootNode();
+    return root instanceof ShadowRoot ? root.host : null;
   }
 
   function roleNodesForPlatform(platform) {
     if (platform === "grok") {
       return [...document.querySelectorAll("[data-testid='user-message'], [data-testid='assistant-message']")];
+    }
+    if (platform === "claude") {
+      const users = outermostNodes([
+        ...document.querySelectorAll('[data-testid="user-message"]'),
+        ...document.querySelectorAll('[class*="font-user-message"]'),
+      ]);
+      const assistantCandidates = [
+        ...document.querySelectorAll('[data-testid="assistant-message"], [data-testid="ai-message"], [data-testid="message-assistant"]'),
+        ...document.querySelectorAll(".font-claude-response, [class*='font-claude-response']"),
+      ];
+      const streamingFallback = assistantCandidates.length === 0
+        ? [...document.querySelectorAll("[data-is-streaming]")]
+        : [];
+      const assistants = outermostNodes([...assistantCandidates, ...streamingFallback])
+        .filter((node) => !node.closest('[data-testid="user-message"]'));
+      return [...users, ...assistants];
+    }
+    if (platform === "gemini") {
+      return uniqueDocuments(queryAllDeep("user-query, model-response"));
     }
     return [...document.querySelectorAll("[data-message-author-role]")];
   }
@@ -52,11 +99,41 @@
     if (platform === "grok") {
       return node.getAttribute("data-testid") === "user-message" ? "human" : "ai";
     }
+    if (platform === "claude") {
+      const testId = String(node.getAttribute("data-testid") || "").toLowerCase();
+      if (testId.includes("user") || testId.includes("human")) return "human";
+      if (testId.includes("assistant") || testId === "ai-message" || testId.includes("message-assistant")) return "ai";
+      const className = classNames(node);
+      if (className.includes("font-user") || className.includes("user-message")) return "human";
+      if (className.includes("font-claude") || className.includes("claude-response") || className.includes("claude-message")) {
+        return "ai";
+      }
+      if (node.hasAttribute("data-is-streaming")) return "ai";
+      return null;
+    }
+    if (platform === "gemini") {
+      const tag = node.tagName.toLowerCase();
+      if (tag === "user-query") return "human";
+      if (tag === "model-response") return "ai";
+      return null;
+    }
     return normalizeRole(node.getAttribute("data-message-author-role"));
   }
 
   function messageIdentity(node, platform) {
     if (platform === "grok") return node.closest("[id^='response-']")?.id || "";
+    if (platform === "claude") {
+      return node.getAttribute("data-message-id")
+        || node.closest("[data-message-id]")?.getAttribute("data-message-id")
+        || node.closest("[data-test-render-count]")?.getAttribute("data-test-render-count")
+        || "";
+    }
+    if (platform === "gemini") {
+      return node.getAttribute("id")
+        || node.getAttribute("data-response-id")
+        || node.getAttribute("data-turn-id")
+        || "";
+    }
     const turnNumber = turnNumberFromNode(node);
     return Number.isInteger(turnNumber) ? `turn-${turnNumber}` : "";
   }
@@ -114,15 +191,31 @@
     return `${lines.map((row) => `| ${row.join(" | ")} |`).join("\n")}\n\n`;
   }
 
+  function skipChrome(node) {
+    const tag = node.tagName.toLowerCase();
+    if (["script", "style", "button", "svg", "canvas", "textarea", "input", "select", "option", "nav", "form", "noscript"].includes(tag)) {
+      return true;
+    }
+    if (tag === "model-thoughts" || tag === "thoughts-panel") return true;
+    const testId = String(node.getAttribute("data-testid") || "").toLowerCase();
+    if (testId.includes("thought") || testId === "copy" || testId.includes("toolbar")) return true;
+    if (node.getAttribute("aria-hidden") === "true" || node.hidden) return true;
+    return false;
+  }
+
   function nodeToMarkdown(node, context = {}) {
     if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
     if (!isElement(node)) return "";
+    if (skipChrome(node)) return "";
 
     const tag = node.tagName.toLowerCase();
-    if (["script", "style", "button", "svg", "canvas", "textarea", "input", "select", "option", "nav", "form", "noscript"].includes(tag)) {
-      return "";
+
+    if (tag === "slot") {
+      const assigned = typeof node.assignedNodes === "function"
+        ? node.assignedNodes({ flatten: true })
+        : [];
+      return assigned.map((child) => nodeToMarkdown(child, context)).join("");
     }
-    if (node.getAttribute("aria-hidden") === "true" || node.hidden) return "";
 
     if (tag === "pre") {
       const code = node.querySelector("code")?.textContent ?? node.textContent ?? "";
@@ -147,9 +240,16 @@
 
     if (tag === "table") return tableToMarkdown(node);
 
-    const children = () => [...node.childNodes].map((child) => nodeToMarkdown(child, context)).join("");
+    const children = () => {
+      if (node.shadowRoot) {
+        return [...node.shadowRoot.childNodes].map((child) => nodeToMarkdown(child, context)).join("");
+      }
+      return [...node.childNodes].map((child) => nodeToMarkdown(child, context)).join("");
+    };
 
     if (/^h[1-6]$/.test(tag)) {
+      const headingText = cleanInline(node.textContent);
+      if (/^(你說了|you said)(?:\s|$)/i.test(headingText)) return "";
       const level = Number(tag.slice(1));
       return `\n\n${"#".repeat(level)} ${cleanInline(children())}\n\n`;
     }
@@ -202,8 +302,46 @@
       .trim();
   }
 
+  function firstDeep(node, selector) {
+    if (!isElement(node)) return null;
+    if (node.matches?.(selector)) return node;
+    const local = node.querySelector?.(selector);
+    if (local) return local;
+    return queryAllDeep(selector, node)[0] || null;
+  }
+
+  function firstDeepByPriority(node, selectors) {
+    for (const selector of selectors) {
+      const found = firstDeep(node, selector);
+      if (found) return found;
+    }
+    return null;
+  }
+
   function contentRoot(roleNode, platform) {
     if (platform === "grok") return roleNode;
+    if (platform === "claude") {
+      if (roleForNode(roleNode, "claude") === "human") return roleNode;
+      const answerRow = roleNode.querySelector(".row-start-2");
+      const scope = answerRow || roleNode;
+      return firstDeep(scope, ".standard-markdown, .font-claude-response-body, [class*='standard-markdown']") || scope;
+    }
+    if (platform === "gemini") {
+      const tag = roleNode.tagName.toLowerCase();
+      if (tag === "user-query") {
+        return firstDeepByPriority(roleNode, [
+          ".query-text",
+          ".query-content",
+          ".user-query-bubble-with-background",
+        ]) || roleNode;
+      }
+      return firstDeepByPriority(roleNode, [
+        ".markdown-main-panel",
+        "message-content.model-response-text",
+        "message-content",
+        ".model-response-text",
+      ]) || roleNode;
+    }
     const turn = roleNode.closest('[data-testid^="conversation-turn-"]');
     if (!turn) return roleNode;
 
@@ -214,13 +352,27 @@
     return roleNode.querySelector('[data-message-author-role="user"]') || roleNode;
   }
 
+  function usesComposedTree(node, platform) {
+    return platform === "gemini" || Boolean(node?.shadowRoot);
+  }
+
   function markdownFromRoleNode(roleNode, platform) {
-    const source = contentRoot(roleNode, platform).cloneNode(true);
-    source.querySelectorAll([
-      "script", "style", "button", "svg", "canvas", "textarea", "input", "select", "nav", "form", "noscript",
-      '[aria-hidden="true"]', "[hidden]", ".sr-only", "[data-state='closed']",
-    ].join(",")).forEach((element) => element.remove());
-    return normalizeMarkdown(nodeToMarkdown(source));
+    const source = contentRoot(roleNode, platform);
+    let content;
+    if (usesComposedTree(source, platform) || usesComposedTree(roleNode, platform)) {
+      content = normalizeMarkdown(nodeToMarkdown(source));
+    } else {
+      const clone = source.cloneNode(true);
+      clone.querySelectorAll([
+        "script", "style", "button", "svg", "canvas", "textarea", "input", "select", "nav", "form", "noscript",
+        '[aria-hidden="true"]', "[hidden]", ".sr-only", "[data-state='closed']",
+      ].join(",")).forEach((element) => element.remove());
+      content = normalizeMarkdown(nodeToMarkdown(clone));
+    }
+    if (platform === "gemini" && roleForNode(roleNode, platform) === "human") {
+      content = PLATFORMS.stripChatChrome(content);
+    }
+    return content;
   }
 
   function collectTurns(accumulator, platform) {
@@ -244,11 +396,11 @@
   }
 
   function scrollContainerFor(element) {
-    let current = element?.parentElement;
+    let current = composedParent(element);
     while (current && current !== document.body) {
       const style = getComputedStyle(current);
       if (/(auto|scroll)/.test(style.overflowY) && current.scrollHeight > current.clientHeight + 16) return current;
-      current = current.parentElement;
+      current = composedParent(current);
     }
     return document.scrollingElement || document.documentElement;
   }
@@ -337,21 +489,19 @@
   }
 
   function pageTitle() {
-    const title = document.title
-      .replace(/\s*[|–—-]\s*(ChatGPT|OpenAI|Grok)\s*$/i, "")
-      .trim();
     const platform = detectPlatform();
-    const fallback = platform === "grok" ? "Grok conversation" : "ChatGPT conversation";
-    return title && !/^(chatgpt|grok)$/i.test(title) ? title : fallback;
+    const fallback = PLATFORMS.titleFallback(platform);
+    const title = PLATFORMS.cleanTitle(document.title, platform);
+    return title && !/^(chatgpt|grok|claude|gemini|google)$/i.test(title) ? title : fallback;
   }
 
   async function captureConversation() {
     const platform = detectPlatform();
-    if (!platform) throw new Error("這個分頁不是支援的 ChatGPT 或 Grok 網址。");
+    if (!platform) throw new Error(`這個分頁不是支援的對話網址。請開啟 ${PLATFORMS.supportedHostsMessage()} 的對話。`);
 
     const initialRoleNode = roleNodesForPlatform(platform)[0];
     if (!initialRoleNode) {
-      throw new Error(`找不到 ${platform === "grok" ? "Grok" : "ChatGPT"} 對話內容。請確認這是已載入完成的對話頁面。`);
+      throw new Error(`找不到 ${PLATFORMS.sourceLabel(platform)} 對話內容。請確認這是已載入完成的對話頁面。`);
     }
 
     const accumulator = CAPTURE_CORE.createTurnAccumulator();

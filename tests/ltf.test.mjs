@@ -66,6 +66,19 @@ test("marks a warned capture as incomplete", () => {
   assert.match(result.content, /Compare it with the original ChatGPT page/);
 });
 
+test("labels Claude and Gemini exports without changing the Markdown format", () => {
+  for (const [platform, label] of [["claude", "Claude"], ["gemini", "Gemini"]]) {
+    const capture = captureWith([
+      { role: "human", content: "Hello" },
+      { role: "ai", content: "Hi" },
+    ], {}, platform);
+    capture.title = `${label} note`;
+    const result = buildMarkdownDocument({ metadata: { language: "en" }, capture });
+    assert.match(result.content, new RegExp(`^# ${label} note`));
+    assert.match(result.content, new RegExp(`> Source: ${label} · Exported:`));
+  }
+});
+
 test("labels Grok exports without changing the Markdown format", () => {
   const capture = captureWith([
     { role: "human", content: "Compare two options.", messageId: "response-user" },
