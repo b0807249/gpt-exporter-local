@@ -6,7 +6,7 @@
 
 這是一個純本機 Chrome 擴充功能：沒有後端、沒有帳號、沒有分析追蹤，也不會呼叫 OpenAI、xAI、Anthropic、Google 或任何第三方 API。擴充功能只會在使用者按下「擷取目前對話」後，暫時讀取當前支援的對話分頁並產生本機下載檔案。
 
-目前版本：`1.3.0`。ChatGPT 與 Grok 已有實機驗證；Claude 與 Gemini 的擷取範圍對齊前兩者（主欄可見文字），仍待實機 smoke test。
+目前版本：`1.3.0`。ChatGPT、Grok、Claude 與 Gemini 網頁主欄可見對話均已實機驗證。
 
 ## 為什麼做這個工具
 
